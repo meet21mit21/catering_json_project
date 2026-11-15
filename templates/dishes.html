@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+  <h2>Dishes</h2>
+  <form id="dish-form" class="grid-2">
+    <input type="hidden" id="dish-id">
+
+    <div class="span-2">
+      <label>Name</label>
+      <input id="d-name" required>
+    </div>
+
+    <div class="span-2">
+      <label>Add ingredient</label>
+      <div class="grid-4">
+        <!-- 🔍 Search bar for ingredient name -->
+        <input id="ing-search" placeholder="Search ingredient">
+
+        <!-- 🧂 Ingredient dropdown -->
+        <select id="ing-item"></select>
+
+        <!-- ⚖️ Quantity field -->
+        <input id="ing-qty" placeholder="Qty per 100">
+        <span class="muted">Unit auto</span>
+
+        <!-- ➕ Add ingredient + 🔄 Refresh button -->
+        <button type="button" id="add-ing">Add</button>
+        <button type="button" id="refresh-ing">⟳</button>
+      </div>
+    </div>
+
+    <div class="span-2">
+      <table id="ing-table"></table>
+    </div>
+
+    <div class="actions span-2">
+      <button type="submit">Save</button>
+      <button type="button" id="dish-reset" class="secondary">Reset</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h3>Dish List</h3>
+  <table id="dishes-table"></table>
+</section>
+
+<script>
+let ingredients = [];
+
+// ------------------------------
+// API CALLS
+// ------------------------------
+async function getItems() {
+  const r = await fetch('/api/items/');
+  return (await r.json()).results;
+}
+
+async function getDishes() {
+  const r = await fetch('/api/dishes/');
+  return (await r.json()).results;
+}
+
+// ------------------------------
+// INGREDIENT SELECT + SEARCH
+// ------------------------------
+async function fillItemSelect(searchText = '') {
+  const items = await getItems();
+  const s = document.querySelector('#ing-item');
+
+  const filtered = items.filter(i =>
+    i.name.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  s.innerHTML = filtered.map(i =>
+    `<option value="${i.id}">${i.name} — ${i.vendor.name} (${i.vendor.mobile_number || ''})</option>`
+  ).join('');
+}
+
+// Handle ingredient search input
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelector('#ing-search').addEventListener('input', (e) => {
+    fillItemSelect(e.target.value);
+  });
+
+  // Refresh ingredient list manually
+  document.querySelector('#refresh-ing').onclick = async () => {
+    await fillItemSelect();
+    alert('Ingredient list refreshed!');
+  };
+});
+
+// ------------------------------
+// INGREDIENTS TABLE
+// ------------------------------
+function renderIng() {
+  const head = '<tr><th>Item</th><th>Qty/100</th><th></th></tr>';
+  document.querySelector('#ing-table').innerHTML =
+    head +
+    ingredients
+      .map(
+        (g, idx) =>
+          `<tr>
+            <td>${g.item_name}</td>
+            <td>${g.quantity}</td>
+            <td class="right">
+              <button class="danger" onclick="rmIng(${idx})">Remove</button>
+            </td>
+          </tr>`
+      )
+      .join('');
+}
+
+function rmIng(i) {
+  ingredients.splice(i, 1);
+  renderIng();
+}
+
+// ------------------------------
+// ADD INGREDIENT BUTTON
+// ------------------------------
+document.querySelector('#add-ing').onclick = async () => {
+  const s = document.querySelector('#ing-item');
+  const qty = document.querySelector('#ing-qty').value;
+  if (!qty) return alert('Enter qty');
+
+  const id = s.value;
+  const name = s.options[s.selectedIndex].text.split(' — ')[0];
+  ingredients.push({ item_id: parseInt(id), item_name: name, quantity: qty });
+  renderIng();
+  document.querySelector('#ing-qty').value = '';
+};
+
+// ------------------------------
+// DISH RENDER + EDIT + DELETE
+// ------------------------------
+async function render() {
+  await fillItemSelect();
+  const dishes = await getDishes();
+
+  const head = '<tr><th>Name</th><th>Ingredients</th><th></th></tr>';
+  document.querySelector('#dishes-table').innerHTML =
+    head +
+    dishes
+      .map(
+        (d) =>
+          `<tr>
+            <td>${d.name}</td>
+            <td>${d.ingredients
+              .map((i) => i.item_name + ' (' + i.quantity + ' ' + i.unit + ')')
+              .join(', ')}</td>
+            <td class="right">
+              <button onclick="editDish(${d.id})">Edit</button>
+              <button class="danger" onclick="delDish(${d.id})">Delete</button>
+            </td>
+          </tr>`
+      )
+      .join('');
+}
+
+async function editDish(id) {
+  const r = await fetch('/api/dishes/' + id + '/');
+  const d = await r.json();
+  document.querySelector('#dish-id').value = d.id;
+  document.querySelector('#d-name').value = d.name;
+  ingredients = d.ingredients.map((i) => ({
+    item_id: i.item_id,
+    item_name: i.item_name,
+    quantity: i.quantity,
+  }));
+  renderIng();
+}
+
+async function delDish(id) {
+  if (!confirm('Delete dish?')) return;
+  await fetch('/api/dishes/' + id + '/', { method: 'DELETE' });
+  render();
+}
+
+// ------------------------------
+// FORM SUBMIT + RESET
+// ------------------------------
+document.querySelector('#dish-reset').onclick = () => {
+  document.querySelector('#dish-form').reset();
+  ingredients = [];
+  renderIng();
+  document.querySelector('#dish-id').value = '';
+};
+
+document.querySelector('#dish-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const id = document.querySelector('#dish-id').value;
+  const payload = {
+    name: document.querySelector('#d-name').value,
+    ingredients: ingredients,
+  };
+
+  if (id)
+    await fetch('/api/dishes/' + id + '/', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  else
+    await fetch('/api/dishes/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+  document.querySelector('#dish-form').reset();
+  ingredients = [];
+  renderIng();
+  document.querySelector('#dish-id').value = '';
+  render();
+};
+
+// ------------------------------
+// INITIAL RENDER
+// ------------------------------
+render();
+</script>
+{% endblock %}

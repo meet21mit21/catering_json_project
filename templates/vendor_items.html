@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<section class="card">
+  <h2>Vendor Items</h2>
+
+  <form id="searchForm">
+    <label>Vendor:
+      <select id="vendorSelect">
+        {% for v in vendors %}
+          <option value="{{ v.id }}">{{ v.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Start date:
+      <input type="date" id="startDate">
+    </label>
+
+    <label>End date:
+      <input type="date" id="endDate">
+    </label>
+
+    <button type="submit">Search</button>
+  </form>
+
+  <div id="results" style="margin-top:1.5rem;"></div>
+</section>
+
+<script>
+document.getElementById('searchForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    const vendorId = document.getElementById('vendorSelect').value;
+    const start = document.getElementById('startDate').value;
+    const end   = document.getElementById('endDate').value;
+
+    fetch(`/vendor-items-api/?vendor_id=${vendorId}&start=${start}&end=${end}`)
+      .then(res => res.json())
+      .then(data => {
+          const container = document.getElementById('results');
+          container.innerHTML = '';
+
+          if (!data.results.length) {
+              container.textContent = 'No items found.';
+              return;
+          }
+
+          data.results.forEach(group => {
+              // Event header
+              const h3 = document.createElement('h3');
+              h3.textContent = `${group.event_name} – ${group.event_date}`;
+              container.appendChild(h3);
+
+              // Items table
+              const table = document.createElement('table');
+              table.style.width = '100%';
+              table.border = '1';
+              table.innerHTML = `
+                <thead>
+                  <tr>
+                    <th>Item Name</th>
+                    <th>Quantity</th>
+                    <th>Unit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${group.items.map(i => `
+                    <tr>
+                      <td>${i.item_name}</td>
+                      <td>${i.quantity}</td>
+                      <td>${i.unit}</td>
+                    </tr>`).join('')}
+                </tbody>`;
+              container.appendChild(table);
+
+              // simple separator line
+              container.appendChild(document.createElement('hr'));
+          });
+      });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+   <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Catering Manager</title>
+      <link rel="stylesheet" href="/static/style.css">
+   </head>
+   <body>
+      <header class="container">
+         <h1>Catering Manager</h1>
+         <nav><a href="/">Home</a>
+             <a href="/vendors/">Vendors</a>
+             <a href="/items/">Items</a>
+             <a href="/dishes/">Dishes</a>
+             <a href="/events/">Events</a>
+             <a href="/vendor-items/">Vendor Items</a>
+         </nav>
+      </header>
+      <main class="container">{% block content %}{% endblock %}</main>
+      <footer class="container muted">Light theme • Print-friendly event view</footer>
+   </body>
+</html>

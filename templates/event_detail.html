@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+  <h2>Create / Edit Event</h2>
+  <form id="event-form" class="grid-4">
+    <input type="hidden" id="e-id">
+    <div><label>Name</label><input id="e-name" required></div>
+    <div><label>Date</label><input id="e-date" type="date" required></div>
+    <div><label>Persons</label><input id="e-persons" type="number" value="100"></div>
+    <div><label>Add Dish</label><select id="e-dish"></select></div>
+
+    <div class="span-4"><div class="chips" id="dish-chips"></div></div>
+
+    <div class="span-4"><h3>Direct Items</h3></div>
+    <div><label>Item</label><select id="dir-item"></select></div>
+    <div><label>Quantity</label><input id="dir-qty" placeholder="e.g. 5"></div>
+    <div><label>&nbsp;</label><button type="button" id="add-dir">Add</button></div>
+    <div></div>
+
+    <div class="span-4"><table id="dir-table"></table></div>
+
+    <div class="actions span-4">
+      <button type="submit">Save</button>
+      <button type="button" id="event-reset" class="secondary">Reset</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h3>Events</h3>
+<h3>Date of function: <span id="event-date"></span></h3>
+<h3>Party name: <span id="event-name"></span></h3>
+<h3>Menu: <span id="event-menu"></span></h3>
+
+  <table id="events-table"></table>
+</section>
+
+<section class="card">
+  <h3>Vendor & Item</h3>
+  <table id="summary-table"></table>
+</section>
+
+<script>
+async function getEventDetails(eventId) {
+  const r = await fetch(`/api/events/${eventId}/`);
+  return await r.json();
+}
+
+async function renderSummary(eventId) {
+  const event = await getEventDetails(eventId);
+  const dishes = event.dishes;
+    // 🧩 Fill the event details section
+  document.querySelector("#event-name").textContent = event.name || "-";
+  document.querySelector("#event-date").textContent = event.date || "-";
+  document.querySelector("#event-menu").textContent = dishes.map(d => d.name).join(", ") || "-";
+
+
+  // Build nested structure: vendor → item → dish
+  const vendorSummary = {};
+
+  for (const d of dishes) {
+    for (const ing of d.ingredients) {
+      const vendorName = ing.vendor_name || "Unknown";
+      if (!vendorSummary[vendorName]) {
+        vendorSummary[vendorName] = {
+          number: ing.vendor_number || "",
+          address: ing.vendor_address || "",
+          items: {},
+        };
+      }
+
+      const itemName = ing.item_name;
+      if (!vendorSummary[vendorName].items[itemName]) {
+        vendorSummary[vendorName].items[itemName] = {
+          unit: ing.unit || "",
+          total_qty: 0,
+          dishes: [],
+        };
+      }
+
+      vendorSummary[vendorName].items[itemName].dishes.push({
+        dish_name: d.name,
+        qty: ing.quantity,
+      });
+      vendorSummary[vendorName].items[itemName].total_qty += parseFloat(ing.quantity || 0);
+    }
+  }
+
+  const head = `
+    <tr>
+      <th>Vendor Name</th>
+      <th>Number</th>
+      <th>Address</th>
+      <th>Item</th>
+      <th>Dish Name</th>
+      <th>Quantity</th>
+      <th>Total Quantity</th>
+      <th>Final Quantity</th>
+      <th>Unit</th>
+    </tr>`;
+
+  let body = "";
+
+  for (const [vendor, vData] of Object.entries(vendorSummary)) {
+    const vendorItems = Object.entries(vData.items);
+    const vendorRowCount = vendorItems.reduce((sum, [_, item]) => sum + item.dishes.length, 0);
+    let vendorFirstRow = true;
+
+    for (const [itemName, itemData] of vendorItems) {
+      const dishCount = itemData.dishes.length;
+      let itemFirstRow = true;
+
+      for (const dish of itemData.dishes) {
+        body += "<tr>";
+
+        if (vendorFirstRow) {
+          body += `<td rowspan="${vendorRowCount}" style="text-align:center; font-weight:bold; border:1px solid #ccc;">${vendor}</td>`;
+          body += `<td rowspan="${vendorRowCount}" style="text-align:center; border:1px solid #ccc;">${vData.number}</td>`;
+          body += `<td rowspan="${vendorRowCount}" style="text-align:center; border:1px solid #ccc;">${vData.address}</td>`;
+          vendorFirstRow = false;
+        }
+
+        if (itemFirstRow) {
+          body += `<td rowspan="${dishCount}" style="text-align:center; font-weight:500; border:1px solid #ccc;">${itemName}</td>`;
+          itemFirstRow = false;
+        }
+
+        body += `<td style="border:1px solid #ccc;">${dish.dish_name}</td>`;
+        body += `<td style="text-align:center; border:1px solid #ccc;">${dish.qty}</td>`;
+
+        if (dish === itemData.dishes[0]) {
+          body += `<td rowspan="${dishCount}" style="text-align:center; font-weight:bold; border:1px solid #ccc;">${itemData.total_qty}</td>`;
+          body += `<td rowspan="${dishCount}" style="text-align:center; border:1px solid #ccc;">&nbsp;</td>`;
+          body += `<td rowspan="${dishCount}" style="text-align:center; border:1px solid #ccc;">${itemData.unit}</td>`;
+        }
+
+        body += "</tr>";
+      }
+    }
+  }
+
+  document.querySelector("#summary-table").innerHTML = head + body;
+}
+
+// 🧠 Pass your specific Event ID here
+const pathParts = window.location.pathname.split('/');
+const eventId = pathParts.filter(Boolean).pop(); // gets the last number in URL
+
+renderSummary(eventId);
+</script>
+
+
+{% endblock %}

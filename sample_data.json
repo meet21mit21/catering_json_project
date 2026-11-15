@@ -1,0 +1,94 @@
+{
+  "vendors": [
+    {
+      "name": "abc",
+      "mobile_number": "7687",
+      "address": "Ahmedabad"
+    },
+    {
+      "name": "hgjhgjh",
+      "mobile_number": "876890",
+      "address": "Ahmedabad"
+    }
+  ],
+  "items": [
+    {
+      "name": "Cheese",
+      "vendor": 1,
+      "unit": "Kg"
+    },
+    {
+      "name": "Paneer",
+      "vendor": 1,
+      "unit": "Kg"
+    },
+    {
+      "name": "Salt",
+      "vendor": 2,
+      "unit": "Kg"
+    },
+    {
+      "name": "Sugar",
+      "vendor": 2,
+      "unit": "Kg"
+    },
+    {
+      "name": "Butter",
+      "vendor": 1,
+      "unit": "Kg"
+    },
+    {
+      "name": "Milk",
+      "vendor": 2,
+      "unit": "Ltr"
+    }
+  ],
+  "dishes": [
+    {
+      "name": "Dish A",
+      "ingredients": [
+        {
+          "item": 1,
+          "qty": "2.00"
+        },
+        {
+          "item": 3,
+          "qty": "1.00"
+        },
+        {
+          "item": 5,
+          "qty": "3.00"
+        }
+      ]
+    },
+    {
+      "name": "Dish B",
+      "ingredients": [
+        {
+          "item": 2,
+          "qty": "6.00"
+        },
+        {
+          "item": 4,
+          "qty": "1.00"
+        },
+        {
+          "item": 6,
+          "qty": "2.00"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "Meets wedding",
+      "date": "2025-05-25",
+      "persons": 500,
+      "dishes": [
+        1,
+        2
+      ],
+      "direct_items": []
+    }
+  ]
+}
